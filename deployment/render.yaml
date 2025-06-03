@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: el-mansoura-attendance-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    plan: free
+    environmentGroup: el-mansoura-bot-env
+    autoDeploy: false
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.16 
