@@ -35,7 +35,7 @@ def run_web_interface():
         print("🌐 Starting Web Interface...")
         from web_interface import app
         
-        port = int(os.environ.get('PORT', 5000))
+        port = int(os.environ.get('PORT', 8080))
         print(f"✅ Web Interface starting on port {port}")
         app.run(
             host='0.0.0.0',

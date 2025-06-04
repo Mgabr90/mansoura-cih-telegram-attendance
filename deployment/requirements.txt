@@ -1,6 +1,34 @@
+# Enhanced Mansoura CIH Telegram Attendance System
+# Production Dependencies for Render Deployment
+
+# Core Bot Framework
 python-telegram-bot==20.7
-geopy==2.4.1
+
+# Environment and Configuration
 python-dotenv==1.0.0
+
+# Location and Time
+geopy==2.4.1
 pytz==2023.3
+
+# HTTP and Async Operations
 aiohttp==3.9.1
-flask==2.3.3 
+
+# Web Server (for health checks and admin interface)
+flask==3.0.0
+werkzeug>=3.0.0
+
+# Analytics Dependencies (for web interface)
+pandas==2.0.3
+matplotlib==3.7.2
+seaborn==0.12.2
+
+# Security
+cryptography>=41.0.0
+
+# Utilities
+requests>=2.31.0
+urllib3>=2.0.0
+
+# Development
+typing-extensions>=4.7.0 
