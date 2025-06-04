@@ -43,11 +43,24 @@ class AttendanceDatabase:
                     check_in_longitude REAL,
                     check_out_latitude REAL,
                     check_out_longitude REAL,
+                    check_in_location_note TEXT,
+                    check_out_location_note TEXT,
                     date DATE,
                     status TEXT DEFAULT 'checked_in',
                     FOREIGN KEY (telegram_id) REFERENCES employees (telegram_id)
                 )
             ''')
+            
+            # Add location note columns if they don't exist (for existing databases)
+            try:
+                cursor.execute('ALTER TABLE attendance ADD COLUMN check_in_location_note TEXT')
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+            
+            try:
+                cursor.execute('ALTER TABLE attendance ADD COLUMN check_out_location_note TEXT')
+            except sqlite3.OperationalError:
+                pass  # Column already exists
             
             # Admins table
             cursor.execute('''
@@ -90,8 +103,8 @@ class AttendanceDatabase:
             cursor.execute('SELECT telegram_id FROM employees WHERE telegram_id = ? AND is_active = 1', (telegram_id,))
             return cursor.fetchone() is not None
     
-    def check_in(self, telegram_id, latitude, longitude):
-        """Record check-in time and location"""
+    def check_in(self, telegram_id, latitude, longitude, location_note=None):
+        """Record check-in time and location with optional location note"""
         egypt_tz = pytz.timezone('Africa/Cairo')
         current_time = datetime.now(egypt_tz)
         current_date = current_time.date()
@@ -110,14 +123,14 @@ class AttendanceDatabase:
             
             cursor.execute('''
                 INSERT INTO attendance 
-                (telegram_id, check_in_time, check_in_latitude, check_in_longitude, date, status)
-                VALUES (?, ?, ?, ?, ?, 'checked_in')
-            ''', (telegram_id, current_time, latitude, longitude, current_date))
+                (telegram_id, check_in_time, check_in_latitude, check_in_longitude, check_in_location_note, date, status)
+                VALUES (?, ?, ?, ?, ?, ?, 'checked_in')
+            ''', (telegram_id, current_time, latitude, longitude, location_note, current_date))
             conn.commit()
             return True, f"Check-in successful at {current_time.strftime('%H:%M:%S')}"
     
-    def check_out(self, telegram_id, latitude, longitude):
-        """Record check-out time and location"""
+    def check_out(self, telegram_id, latitude, longitude, location_note=None):
+        """Record check-out time and location with optional location note"""
         egypt_tz = pytz.timezone('Africa/Cairo')
         current_time = datetime.now(egypt_tz)
         current_date = current_time.date()
@@ -137,9 +150,9 @@ class AttendanceDatabase:
             
             cursor.execute('''
                 UPDATE attendance 
-                SET check_out_time = ?, check_out_latitude = ?, check_out_longitude = ?, status = 'checked_out'
+                SET check_out_time = ?, check_out_latitude = ?, check_out_longitude = ?, check_out_location_note = ?, status = 'checked_out'
                 WHERE id = ?
-            ''', (current_time, latitude, longitude, record[0]))
+            ''', (current_time, latitude, longitude, location_note, record[0]))
             conn.commit()
             return True, f"Check-out successful at {current_time.strftime('%H:%M:%S')}"
     

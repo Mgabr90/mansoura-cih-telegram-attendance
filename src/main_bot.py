@@ -6,6 +6,7 @@ A comprehensive Telegram bot for employee attendance tracking with location veri
 
 import logging
 import asyncio
+import threading
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 
 # Import configuration
@@ -134,14 +135,22 @@ class AttendanceBot:
         """
         await update.message.reply_text(help_text, parse_mode='Markdown')
     
+    def run_notification_service(self):
+        """Run notification service in a separate thread"""
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(self.notification_service.run_scheduler())
+    
     def run(self):
         """Start the bot with all services"""
         logger.info("🤖 Starting El Mansoura Attendance Bot (Modular Version)...")
         logger.info("🔔 Notification service enabled")
         logger.info("📊 All handlers registered")
         
-        # Start notification service in background
-        asyncio.create_task(self.notification_service.run_scheduler())
+        # Start notification service in background thread
+        notification_thread = threading.Thread(target=self.run_notification_service)
+        notification_thread.daemon = True
+        notification_thread.start()
         
         # Run the bot
         self.app.run_polling()

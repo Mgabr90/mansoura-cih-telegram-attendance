@@ -1,8 +1,8 @@
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from the correct path
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
 # Bot Configuration
 BOT_TOKEN = os.getenv('BOT_TOKEN')
@@ -17,6 +17,10 @@ DATABASE_NAME = os.getenv('DATABASE_NAME', 'attendance.db')
 
 # Timezone Configuration
 TIMEZONE = os.getenv('TIMEZONE', 'Africa/Cairo')
+
+# Location Verification Settings
+ALLOW_OUT_OF_RADIUS = True  # Allow check-in/out outside radius with warning
+WARNING_RADIUS = int(os.getenv('WARNING_RADIUS', 500))  # Warning radius in meters
 
 # Notification Settings
 NOTIFICATION_WORK_START = 6  # 6 AM

@@ -2,12 +2,15 @@ from datetime import datetime
 import pytz
 from telegram import Update
 from telegram.ext import ContextTypes
+import logging
 
 from database import AttendanceDatabase
-from location_utils import is_within_radius
+from location_utils import verify_location_with_warnings, get_location_status_emoji
 from utils.keyboards import Keyboards
 from utils.messages import Messages
-from config.settings import OFFICE_LATITUDE, OFFICE_LONGITUDE, OFFICE_RADIUS, TIMEZONE
+from config.settings import OFFICE_LATITUDE, OFFICE_LONGITUDE, OFFICE_RADIUS, TIMEZONE, ALLOW_OUT_OF_RADIUS, WARNING_RADIUS
+
+logger = logging.getLogger(__name__)
 
 class EmployeeHandlers:
     """Handler class for employee-related commands and interactions"""
@@ -21,17 +24,18 @@ class EmployeeHandlers:
         
         if not self.db.is_employee_registered(user.id):
             await update.message.reply_text(
-                Messages.welcome_new_user(user.first_name),
-                reply_markup=Keyboards.get_registration_keyboard()
+                Messages.welcome_unregistered(user),
+                reply_markup=Keyboards.get_registration_keyboard(),
+                parse_mode='Markdown'
             )
         else:
-            # Check current status
-            status = self.db.get_attendance_status(user.id)
-            is_checked_in = status and status[2] == 'checked_in'
+            is_checked_in = self.db.get_attendance_status(user.id)
+            checked_in = is_checked_in and is_checked_in[2] == 'checked_in'
             
             await update.message.reply_text(
-                Messages.welcome_back(user.first_name),
-                reply_markup=Keyboards.get_main_keyboard(is_checked_in)
+                Messages.welcome_registered(user),
+                reply_markup=Keyboards.get_main_keyboard(checked_in),
+                parse_mode='Markdown'
             )
     
     async def register_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -43,8 +47,8 @@ class EmployeeHandlers:
             return
         
         await update.message.reply_text(
-            Messages.registration_request(),
-            reply_markup=Keyboards.get_contact_sharing_keyboard(),
+            Messages.registration_prompt(),
+            reply_markup=Keyboards.get_contact_keyboard(),
             parse_mode='Markdown'
         )
     
@@ -69,7 +73,7 @@ class EmployeeHandlers:
         )
     
     async def handle_location(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle location sharing for check-in/check-out"""
+        """Handle location sharing for check-in/check-out with warning system"""
         user = update.effective_user
         location = update.message.location
         
@@ -77,56 +81,92 @@ class EmployeeHandlers:
             await update.message.reply_text("❌ Please register first using /register")
             return
         
-        # Check if location is within office radius
-        within_radius, distance = is_within_radius(
+        # Use new warning-based location verification
+        status, distance, message = verify_location_with_warnings(
             location.latitude, location.longitude,
-            OFFICE_LATITUDE, OFFICE_LONGITUDE, OFFICE_RADIUS
+            OFFICE_LATITUDE, OFFICE_LONGITUDE, 
+            OFFICE_RADIUS, WARNING_RADIUS
         )
         
-        if not within_radius:
-            await update.message.reply_text(
-                Messages.location_error(distance),
-                parse_mode='Markdown'
-            )
-            return
+        # Check current attendance status to determine check-in or check-out
+        attendance_status = self.db.get_attendance_status(user.id)
         
-        # Check current status to determine check-in or check-out
-        status = self.db.get_attendance_status(user.id)
-        
-        if not status or status[2] == 'checked_out':
-            await self._handle_checkin(update, location, distance)
-        elif status[2] == 'checked_in':
-            await self._handle_checkout(update, location, distance, status)
+        if not attendance_status or attendance_status[2] == 'checked_out':
+            await self._handle_checkin(update, location, distance, status, message)
+        elif attendance_status[2] == 'checked_in':
+            await self._handle_checkout(update, location, distance, status, message, attendance_status)
     
-    async def _handle_checkin(self, update: Update, location, distance):
-        """Handle check-in process"""
+    async def _handle_checkin(self, update: Update, location, distance, status, status_message):
+        """Handle check-in process with warning system"""
         user = update.effective_user
-        success, message = self.db.check_in(user.id, location.latitude, location.longitude)
+        
+        # Add location status to the check-in record
+        location_note = f"{get_location_status_emoji(status)} {distance:.0f}m from office"
+        
+        success, message = self.db.check_in(
+            user.id, 
+            location.latitude, 
+            location.longitude,
+            location_note=location_note
+        )
         
         if success:
             time_str = message.split('at ')[1]
+            
+            # Create response based on location status
+            response = f"🟢 **Check-in Successful!**\n"
+            response += f"⏰ Time: {time_str}\n"
+            response += f"{status_message}\n"
+            response += f"📍 Location recorded: {location.latitude:.6f}, {location.longitude:.6f}"
+            
+            # Add warning note if outside normal radius
+            if status != 'within':
+                response += f"\n\n⚠️ **Note:** This check-in was recorded outside the standard office radius."
+            
             await update.message.reply_text(
-                Messages.checkin_success(time_str, distance, location.latitude, location.longitude),
+                response,
                 reply_markup=Keyboards.get_main_keyboard(True),
                 parse_mode='Markdown'
             )
         else:
             await update.message.reply_text(f"❌ {message}")
     
-    async def _handle_checkout(self, update: Update, location, distance, status):
-        """Handle check-out process"""
+    async def _handle_checkout(self, update: Update, location, distance, status, status_message, attendance_status):
+        """Handle check-out process with warning system"""
         user = update.effective_user
-        success, message = self.db.check_out(user.id, location.latitude, location.longitude)
+        
+        # Add location status to the check-out record
+        location_note = f"{get_location_status_emoji(status)} {distance:.0f}m from office"
+        
+        success, message = self.db.check_out(
+            user.id, 
+            location.latitude, 
+            location.longitude,
+            location_note=location_note
+        )
         
         if success:
-            check_in_time = datetime.fromisoformat(status[0])
+            check_in_time = datetime.fromisoformat(attendance_status[0])
             check_out_time = datetime.now(pytz.timezone(TIMEZONE))
             work_duration = check_out_time - check_in_time
             time_str = message.split('at ')[1]
             
+            # Calculate work hours
+            hours, remainder = divmod(work_duration.total_seconds(), 3600)
+            minutes = remainder // 60
+            
+            response = f"🔴 **Check-out Successful!**\n"
+            response += f"⏰ Time: {time_str}\n"
+            response += f"⏱️ Work Duration: {int(hours)}h {int(minutes)}m\n"
+            response += f"{status_message}\n"
+            response += f"📍 Location recorded: {location.latitude:.6f}, {location.longitude:.6f}"
+            
+            # Add warning note if outside normal radius
+            if status != 'within':
+                response += f"\n\n⚠️ **Note:** This check-out was recorded outside the standard office radius."
+            
             await update.message.reply_text(
-                Messages.checkout_success(time_str, work_duration, distance, 
-                                        location.latitude, location.longitude),
+                response,
                 reply_markup=Keyboards.get_main_keyboard(False),
                 parse_mode='Markdown'
             )
