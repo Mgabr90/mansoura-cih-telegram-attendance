@@ -5,11 +5,11 @@ El Mansoura Attendance Bot - Webhook Version for Free Deployment
 
 import logging
 import os
+import asyncio
+import threading
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 from telegram import Update
 from flask import Flask, request, Response
-import asyncio
-import threading
 
 # Import configuration
 from config.settings import BOT_TOKEN, validate_settings
@@ -55,6 +55,26 @@ class AttendanceBotWebhook:
         # Initialize Flask app for webhooks
         self.flask_app = Flask(__name__)
         self.setup_flask_routes()
+        
+        # Event loop for async operations
+        self.loop = None
+        self.loop_thread = None
+        self.start_async_loop()
+    
+    def start_async_loop(self):
+        """Start an event loop in a separate thread for async operations"""
+        def run_loop():
+            self.loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.loop)
+            self.loop.run_forever()
+        
+        self.loop_thread = threading.Thread(target=run_loop)
+        self.loop_thread.daemon = True
+        self.loop_thread.start()
+        
+        # Wait for loop to be ready
+        while self.loop is None:
+            threading.Event().wait(0.01)
     
     def setup_handlers(self):
         """Register all command and message handlers"""
@@ -101,7 +121,13 @@ class AttendanceBotWebhook:
             """Handle incoming webhook updates from Telegram"""
             try:
                 update = Update.de_json(request.get_json(force=True), self.app.bot)
-                asyncio.create_task(self.app.process_update(update))
+                # Schedule the update processing in the async loop
+                future = asyncio.run_coroutine_threadsafe(
+                    self.app.process_update(update), 
+                    self.loop
+                )
+                # Wait for completion (with timeout)
+                future.result(timeout=10)
                 return Response(status=200)
             except Exception as e:
                 logger.error(f"Webhook error: {e}")
@@ -112,7 +138,12 @@ class AttendanceBotWebhook:
             """Set webhook URL (for initial setup)"""
             webhook_url = f"https://{request.host}/webhook"
             try:
-                asyncio.run(self.app.bot.set_webhook(webhook_url))
+                # Run the webhook setting in the async loop
+                future = asyncio.run_coroutine_threadsafe(
+                    self.app.bot.set_webhook(webhook_url), 
+                    self.loop
+                )
+                future.result(timeout=10)
                 return f"Webhook set to: {webhook_url}"
             except Exception as e:
                 logger.error(f"Failed to set webhook: {e}")
