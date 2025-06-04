@@ -7,14 +7,13 @@ from database import AttendanceDatabase
 from location_utils import is_within_radius
 from utils.keyboards import Keyboards
 from utils.messages import Messages
-from config import Config
+from config.settings import OFFICE_LATITUDE, OFFICE_LONGITUDE, OFFICE_RADIUS, TIMEZONE
 
 class EmployeeHandlers:
     """Handler class for employee-related commands and interactions"""
     
     def __init__(self, db: AttendanceDatabase):
         self.db = db
-        self.config = Config
         
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start command"""
@@ -81,8 +80,7 @@ class EmployeeHandlers:
         # Check if location is within office radius
         within_radius, distance = is_within_radius(
             location.latitude, location.longitude,
-            self.config.OFFICE_LATITUDE, self.config.OFFICE_LONGITUDE, 
-            self.config.OFFICE_RADIUS
+            OFFICE_LATITUDE, OFFICE_LONGITUDE, OFFICE_RADIUS
         )
         
         if not within_radius:
@@ -122,7 +120,7 @@ class EmployeeHandlers:
         
         if success:
             check_in_time = datetime.fromisoformat(status[0])
-            check_out_time = datetime.now(pytz.timezone(self.config.TIMEZONE))
+            check_out_time = datetime.now(pytz.timezone(TIMEZONE))
             work_duration = check_out_time - check_in_time
             time_str = message.split('at ')[1]
             

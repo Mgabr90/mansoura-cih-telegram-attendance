@@ -10,7 +10,7 @@ import logging
 import asyncio
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
 
-from config import Config
+from config.settings import BOT_TOKEN, DATABASE_NAME, OFFICE_LATITUDE, OFFICE_LONGITUDE, OFFICE_RADIUS, validate_settings
 from database import AttendanceDatabase
 from notification_service import NotificationService
 from handlers.employee_handlers import EmployeeHandlers
@@ -28,20 +28,18 @@ class AttendanceBot:
     
     def __init__(self):
         # Validate configuration
-        config_errors = Config.validate()
-        if config_errors:
-            raise ValueError(f"Configuration errors: {', '.join(config_errors)}")
+        validate_settings()
         
         # Initialize core services
-        self.db = AttendanceDatabase(Config.DATABASE_NAME)
-        self.notification_service = NotificationService(Config.BOT_TOKEN, self.db)
+        self.db = AttendanceDatabase(DATABASE_NAME)
+        self.notification_service = NotificationService(BOT_TOKEN, self.db)
         
         # Initialize handlers
         self.employee_handlers = EmployeeHandlers(self.db)
         self.admin_handlers = AdminHandlers(self.db)
         
         # Initialize Telegram application
-        self.app = Application.builder().token(Config.BOT_TOKEN).build()
+        self.app = Application.builder().token(BOT_TOKEN).build()
         self.setup_handlers()
     
     def setup_handlers(self):
@@ -92,9 +90,9 @@ class AttendanceBot:
     def run(self):
         """Start the bot with all services"""
         logger.info("🤖 Starting El Mansoura Attendance Bot...")
-        logger.info(f"🏢 Office Location: {Config.OFFICE_LATITUDE}, {Config.OFFICE_LONGITUDE}")
-        logger.info(f"📏 Attendance Radius: {Config.OFFICE_RADIUS}m")
-        logger.info(f"🗄️ Database: {Config.DATABASE_NAME}")
+        logger.info(f"🏢 Office Location: {OFFICE_LATITUDE}, {OFFICE_LONGITUDE}")
+        logger.info(f"📏 Attendance Radius: {OFFICE_RADIUS}m")
+        logger.info(f"🗄️ Database: {DATABASE_NAME}")
         logger.info("🔔 Notification service enabled")
         logger.info("🎯 Modular architecture loaded")
         

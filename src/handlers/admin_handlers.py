@@ -7,15 +7,14 @@ from telegram.ext import ContextTypes
 from database import AttendanceDatabase
 from utils.keyboards import Keyboards
 from utils.messages import Messages
-from config import Config
+from config.settings import TIMEZONE
 
 class AdminHandlers:
     """Handler class for admin-related commands and interactions"""
     
     def __init__(self, db: AttendanceDatabase):
         self.db = db
-        self.config = Config
-        self.egypt_tz = pytz.timezone('Africa/Cairo')
+        self.egypt_tz = pytz.timezone(TIMEZONE)
     
     async def admin_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /admin command"""
@@ -59,8 +58,7 @@ class AdminHandlers:
             return
         
         report_data = self.db.get_all_employees_report()
-        egypt_tz = pytz.timezone(self.config.TIMEZONE)
-        today = datetime.now(egypt_tz).date().strftime('%Y-%m-%d')
+        today = datetime.now(self.egypt_tz).date().strftime('%Y-%m-%d')
         
         if not report_data:
             await update.message.reply_text("📊 No employee data found.")

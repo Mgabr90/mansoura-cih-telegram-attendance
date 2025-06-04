@@ -8,8 +8,8 @@ load_dotenv()
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 
 # Office Location Configuration
-OFFICE_LAT = float(os.getenv('OFFICE_LATITUDE', 31.0417))
-OFFICE_LON = float(os.getenv('OFFICE_LONGITUDE', 31.3778))
+OFFICE_LATITUDE = float(os.getenv('OFFICE_LATITUDE', 31.0417))
+OFFICE_LONGITUDE = float(os.getenv('OFFICE_LONGITUDE', 31.3778))
 OFFICE_RADIUS = int(os.getenv('OFFICE_RADIUS', 100))
 
 # Database Configuration
@@ -40,11 +40,11 @@ def validate_settings():
     if not BOT_TOKEN:
         raise ValueError("BOT_TOKEN is required but not set in environment variables")
     
-    if not (-90 <= OFFICE_LAT <= 90):
-        raise ValueError(f"Invalid OFFICE_LATITUDE: {OFFICE_LAT}")
+    if not (-90 <= OFFICE_LATITUDE <= 90):
+        raise ValueError(f"Invalid OFFICE_LATITUDE: {OFFICE_LATITUDE}")
     
-    if not (-180 <= OFFICE_LON <= 180):
-        raise ValueError(f"Invalid OFFICE_LONGITUDE: {OFFICE_LON}")
+    if not (-180 <= OFFICE_LONGITUDE <= 180):
+        raise ValueError(f"Invalid OFFICE_LONGITUDE: {OFFICE_LONGITUDE}")
     
     if OFFICE_RADIUS <= 0:
         raise ValueError(f"OFFICE_RADIUS must be positive: {OFFICE_RADIUS}")
