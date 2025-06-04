@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Production start script for Render deployment
-Runs the El Mansoura CIH Attendance System optimized for cloud deployment
+Runs the El Mansoura CIH Attendance System with full web interface and webhook integration
 """
 
 import sys
@@ -17,8 +17,13 @@ from telegram import Update
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def create_production_app():
-    """Create the production Flask app with webhook integration"""
-    app = Flask(__name__)
+    """Create the production Flask app with full web interface and webhook integration"""
+    
+    # Import and initialize the full web interface
+    from web_interface import app as web_app
+    
+    # Use the existing web interface Flask app
+    app = web_app
     
     # Initialize bot instance
     bot_instance = None
@@ -87,30 +92,6 @@ def create_production_app():
             logging.error(f"Webhook error: {e}")
             return jsonify({'error': 'Internal server error'}), 500
     
-    @app.route('/web-health')
-    def health_check():
-        """Health check endpoint for Render"""
-        bot_status = 'running' if bot_instance else 'initializing'
-        return jsonify({
-            'status': 'healthy',
-            'service': 'mansoura-cih-attendance',
-            'bot_status': bot_status,
-            'webhook_ready': bot_instance is not None
-        }), 200
-    
-    @app.route('/')
-    def index():
-        """Root endpoint"""
-        return jsonify({
-            'message': 'El Mansoura CIH Telegram Attendance System',
-            'status': 'running',
-            'bot': 'webhook-mode',
-            'endpoints': {
-                'webhook': '/webhook',
-                'health': '/web-health'
-            }
-        }), 200
-    
     @app.route('/set-webhook', methods=['POST'])
     def set_webhook():
         """Set the webhook URL for the bot"""
@@ -151,6 +132,28 @@ def create_production_app():
             logging.error(f"Set webhook error: {e}")
             return jsonify({'error': str(e)}), 500
     
+    @app.route('/system-info')
+    def system_info():
+        """System information endpoint"""
+        bot_status = 'running' if bot_instance else 'initializing'
+        return jsonify({
+            'message': 'El Mansoura CIH Telegram Attendance System - Full Production',
+            'status': 'running',
+            'bot': 'webhook-mode',
+            'bot_status': bot_status,
+            'webhook_ready': bot_instance is not None,
+            'web_interface': 'active',
+            'endpoints': {
+                'webhook': '/webhook',
+                'web_health': '/web-health',
+                'admin_login': '/login',
+                'admin_dashboard': '/admin',
+                'api_employees': '/api/employees',
+                'api_attendance': '/api/attendance',
+                'api_stats': '/api/stats'
+            }
+        }), 200
+    
     # Initialize bot when app starts
     if initialize_bot():
         print("🤖 Bot ready for webhook mode")
@@ -160,7 +163,7 @@ def create_production_app():
 def main():
     """Main production launcher"""
     try:
-        print("🚀 Starting El Mansoura CIH Attendance System (Production)")
+        print("🚀 Starting El Mansoura CIH Attendance System (Full Production)")
         print("=" * 60)
         
         # Setup logging for production
@@ -172,12 +175,16 @@ def main():
         # Get port from environment
         port = int(os.environ.get('PORT', 10000))
         
-        # Create Flask app
+        # Create Flask app with full web interface
         app = create_production_app()
         
-        print(f"🏥 Starting webhook server on port {port}")
+        print(f"🏥 Starting full system on port {port}")
+        print("🌐 Full Web Interface: Active")
         print("🔗 Webhook endpoint: /webhook")
+        print("🔐 Admin login: /login")
+        print("📊 Admin dashboard: /admin")
         print("🏥 Health check: /web-health")
+        print("📋 System info: /system-info")
         
         # Run Flask app
         app.run(
