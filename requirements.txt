@@ -24,6 +24,35 @@ flask==3.0.0
 
 # Analytics Dependencies (Optional)
 # Uncomment if using web interface
-# pandas==2.1.4
-# matplotlib==3.8.2
-# seaborn==0.13.0 
+pandas==2.0.3
+matplotlib==3.7.2
+seaborn==0.12.2
+werkzeug==2.3.7
+
+# Async Support
+asyncio==3.4.3
+
+# Security
+cryptography>=41.0.0
+
+# Database
+sqlite3
+
+# Utilities
+requests>=2.31.0
+urllib3>=2.0.0
+
+# Development
+typing-extensions>=4.7.0
+
+# Optional: Better JSON handling
+orjson>=3.9.0
+
+# Optional: Better performance
+uvloop>=0.17.0; sys_platform != "win32"
+
+# Timezone support
+tzdata>=2023.3
+
+# HTTP client improvements
+httpx>=0.24.0 

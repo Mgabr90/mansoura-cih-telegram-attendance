@@ -195,6 +195,42 @@ class HealthService:
                     'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 }), 500
         
+        @self.app.route('/webhook', methods=['POST'])
+        def webhook_endpoint():
+            """Webhook endpoint for Telegram updates."""
+            from flask import request
+            import json
+            
+            try:
+                # Get the update data
+                update_data = request.get_json()
+                
+                if not update_data:
+                    logger.warning("Received empty webhook data")
+                    return jsonify({'status': 'error', 'message': 'No data'}), 400
+                
+                # Log webhook received (but don't log the full content for privacy)
+                self.db.log_server_activity('webhook', f'Telegram webhook received - update_id: {update_data.get("update_id", "unknown")}')
+                
+                # Here you would normally process the update with your bot
+                # For now, we'll just acknowledge receipt
+                logger.info(f"Webhook received: update_id {update_data.get('update_id')}")
+                
+                return jsonify({
+                    'status': 'ok',
+                    'message': 'Webhook received',
+                    'update_id': update_data.get('update_id'),
+                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                }), 200
+                
+            except Exception as e:
+                logger.error(f"Webhook processing failed: {e}")
+                return jsonify({
+                    'status': 'error', 
+                    'error': str(e),
+                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                }), 500
+        
         # Disable Flask logging to avoid cluttering the console
         logging.getLogger('werkzeug').setLevel(logging.WARNING)
     

@@ -1,13 +1,15 @@
 services:
   - type: web
-    name: el-mansoura-attendance-bot
+    name: el-mansoura-attendance-system
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python bot.py
+    startCommand: python app.py
     plan: free
     environmentGroup: el-mansoura-bot-env
     autoDeploy: false
-    healthCheckPath: /
+    healthCheckPath: /web-health
     envVars:
       - key: PYTHON_VERSION
-        value: 3.9.16 
+        value: 3.9.16
+      - key: PORT
+        value: 10000 

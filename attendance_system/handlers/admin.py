@@ -38,9 +38,154 @@ class AdminHandlers:
         self.db = db
         self.message_formatter = message_formatter
         self.keyboard_builder = KeyboardBuilder()
+        self.config = Config()
         
         logger.info("Admin handlers initialized")
     
+    async def set_webhook_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle /set_webhook command - first priority admin function."""
+        user = update.effective_user
+        
+        if not self.db.is_admin(user.id):
+            error_message = self.message_formatter.format_error_message("admin_required")
+            await update.message.reply_text(error_message, parse_mode='Markdown')
+            return
+        
+        if not context.args or len(context.args) != 1:
+            await update.message.reply_text(
+                "🔗 **Webhook Setup**\n\n"
+                "Usage: `/set_webhook <webhook_url>`\n\n"
+                "**Examples:**\n"
+                "• `/set_webhook https://your-app.onrender.com/webhook`\n"
+                "• `/set_webhook https://your-domain.com/webhook`\n\n"
+                "⚠️ **Important:** The URL must be HTTPS and accessible from the internet.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        webhook_url = context.args[0]
+        
+        # Validate URL format
+        if not webhook_url.startswith('https://'):
+            await update.message.reply_text(
+                "❌ **Invalid URL**\n\n"
+                "Webhook URL must start with `https://`\n"
+                "Telegram requires HTTPS for webhooks.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Add /webhook to the end if not present
+        if not webhook_url.endswith('/webhook'):
+            webhook_url = webhook_url.rstrip('/') + '/webhook'
+        
+        try:
+            # Set the webhook
+            bot = context.bot
+            await bot.set_webhook(url=webhook_url)
+            
+            # Test the webhook
+            webhook_info = await bot.get_webhook_info()
+            
+            success_message = "✅ **Webhook Set Successfully!**\n\n"
+            success_message += f"**URL:** `{webhook_url}`\n"
+            success_message += f"**Status:** Active\n"
+            success_message += f"**Pending Updates:** {webhook_info.pending_update_count}\n"
+            
+            if webhook_info.last_error_date:
+                success_message += f"**Last Error:** {webhook_info.last_error_message}\n"
+            else:
+                success_message += "**Status:** ✅ No errors\n"
+            
+            await update.message.reply_text(success_message, parse_mode='Markdown')
+            logger.info(f"Admin {user.id} set webhook to {webhook_url}")
+            
+        except Exception as e:
+            error_message = f"❌ **Webhook Setup Failed**\n\n"
+            error_message += f"Error: `{str(e)}`\n\n"
+            error_message += "**Common Issues:**\n"
+            error_message += "• URL not accessible from internet\n"
+            error_message += "• Invalid SSL certificate\n"
+            error_message += "• Server not responding\n"
+            error_message += "• URL format incorrect"
+            
+            await update.message.reply_text(error_message, parse_mode='Markdown')
+            logger.error(f"Webhook setup failed for admin {user.id}: {str(e)}")
+    
+    async def webhook_info_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle /webhook_info command - get current webhook information."""
+        user = update.effective_user
+        
+        if not self.db.is_admin(user.id):
+            error_message = self.message_formatter.format_error_message("admin_required")
+            await update.message.reply_text(error_message, parse_mode='Markdown')
+            return
+        
+        try:
+            bot = context.bot
+            webhook_info = await bot.get_webhook_info()
+            
+            info_message = "🔗 **Current Webhook Information**\n\n"
+            
+            if webhook_info.url:
+                info_message += f"**URL:** `{webhook_info.url}`\n"
+                info_message += f"**Status:** ✅ Active\n"
+                info_message += f"**Pending Updates:** {webhook_info.pending_update_count}\n"
+                info_message += f"**Max Connections:** {webhook_info.max_connections}\n"
+                
+                if webhook_info.last_error_date:
+                    error_date = datetime.fromtimestamp(webhook_info.last_error_date)
+                    info_message += f"**Last Error Date:** {error_date.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                    info_message += f"**Last Error:** `{webhook_info.last_error_message}`\n"
+                else:
+                    info_message += "**Last Error:** None ✅\n"
+                
+                if webhook_info.ip_address:
+                    info_message += f"**IP Address:** `{webhook_info.ip_address}`\n"
+                    
+            else:
+                info_message += "**Status:** ❌ No webhook set\n"
+                info_message += "Use `/set_webhook <url>` to configure webhook."
+            
+            await update.message.reply_text(info_message, parse_mode='Markdown')
+            logger.info(f"Admin {user.id} requested webhook info")
+            
+        except Exception as e:
+            await update.message.reply_text(
+                f"❌ **Error Getting Webhook Info**\n\n"
+                f"Error: `{str(e)}`",
+                parse_mode='Markdown'
+            )
+            logger.error(f"Failed to get webhook info for admin {user.id}: {str(e)}")
+    
+    async def delete_webhook_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        """Handle /delete_webhook command - remove current webhook."""
+        user = update.effective_user
+        
+        if not self.db.is_admin(user.id):
+            error_message = self.message_formatter.format_error_message("admin_required")
+            await update.message.reply_text(error_message, parse_mode='Markdown')
+            return
+        
+        try:
+            bot = context.bot
+            await bot.delete_webhook()
+            
+            success_message = "✅ **Webhook Deleted Successfully**\n\n"
+            success_message += "The bot is now using polling mode.\n"
+            success_message += "Use `/set_webhook <url>` to set a new webhook."
+            
+            await update.message.reply_text(success_message, parse_mode='Markdown')
+            logger.info(f"Admin {user.id} deleted webhook")
+            
+        except Exception as e:
+            await update.message.reply_text(
+                f"❌ **Error Deleting Webhook**\n\n"
+                f"Error: `{str(e)}`",
+                parse_mode='Markdown'
+            )
+            logger.error(f"Failed to delete webhook for admin {user.id}: {str(e)}")
+
     async def admin_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle /admin command - main admin panel."""
         user = update.effective_user
@@ -50,12 +195,33 @@ class AdminHandlers:
             await update.message.reply_text(error_message, parse_mode='Markdown')
             return
         
-        keyboard = self.keyboard_builder.get_admin_main_keyboard()
+        # Create enhanced admin keyboard with webhook management
+        keyboard = [
+            [
+                InlineKeyboardButton("🔗 Webhook Setup", callback_data="webhook_menu"),
+                InlineKeyboardButton("📊 Dashboard", callback_data="today_report")
+            ],
+            [
+                InlineKeyboardButton("👥 All Employees", callback_data="all_employees"),
+                InlineKeyboardButton("⏰ Exceptional Hours", callback_data="exceptional_hours_menu")
+            ],
+            [
+                InlineKeyboardButton("📈 Analytics", callback_data="analytics"),
+                InlineKeyboardButton("⚙️ Settings", callback_data="settings_menu")
+            ],
+            [
+                InlineKeyboardButton("🖥️ Server Status", callback_data="server_status"),
+                InlineKeyboardButton("🔄 Refresh", callback_data="refresh_report")
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
         await update.message.reply_text(
             "🔐 **Admin Control Panel**\n\n"
             "Welcome to the Enhanced Attendance System administration.\n"
+            "🔗 **Webhook Setup** is your first priority for deployment.\n\n"
             "Choose an option below:",
-            reply_markup=keyboard,
+            reply_markup=reply_markup,
             parse_mode='Markdown'
         )
         
@@ -325,21 +491,27 @@ class AdminHandlers:
         data = query.data
         
         # Route callback queries
-        if data == "admin_today_report":
+        if data == "webhook_menu":
+            await self._handle_webhook_menu(query)
+        elif data == "webhook_info":
+            await self._handle_webhook_info(query)
+        elif data == "webhook_delete":
+            await self._handle_webhook_delete(query)
+        elif data == "today_report":
             await self._handle_today_report(query)
-        elif data == "admin_all_employees":
+        elif data == "all_employees":
             await self._handle_all_employees(query)
-        elif data == "admin_exceptional_hours":
+        elif data == "exceptional_hours_menu":
             await self._handle_exceptional_hours_menu(query)
-        elif data == "admin_analytics":
+        elif data == "analytics":
             await self._handle_analytics(query)
-        elif data == "admin_settings":
+        elif data == "settings_menu":
             await self._handle_settings_menu(query)
-        elif data == "admin_server_status":
+        elif data == "server_status":
             await self._handle_server_status(query)
-        elif data == "admin_refresh":
+        elif data == "refresh_report":
             await self._handle_refresh_report(query)
-        elif data == "admin_send_summary":
+        elif data == "send_summary":
             await self._handle_send_summary(query)
         elif data.startswith("emp_"):
             await self._handle_employee_action(query, data)
@@ -347,6 +519,131 @@ class AdminHandlers:
             await query.edit_message_text("❓ Unknown action.")
         
         logger.info(f"Callback query '{data}' handled for admin {user.id}")
+    
+    async def _handle_webhook_menu(self, query) -> None:
+        """Handle webhook management menu callback."""
+        try:
+            # Get current webhook info
+            webhook_info = await query.get_bot().get_webhook_info()
+            
+            message = "🔗 **Webhook Management**\n\n"
+            
+            if webhook_info.url:
+                message += f"**Current Status:** ✅ Active\n"
+                message += f"**URL:** `{webhook_info.url}`\n"
+                message += f"**Pending Updates:** {webhook_info.pending_update_count}\n\n"
+                
+                if webhook_info.last_error_date:
+                    error_date = datetime.fromtimestamp(webhook_info.last_error_date)
+                    message += f"**Last Error:** {error_date.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                    message += f"**Error Details:** {webhook_info.last_error_message}\n\n"
+                else:
+                    message += "**Status:** ✅ No errors\n\n"
+                    
+                keyboard = [
+                    [InlineKeyboardButton("📋 View Details", callback_data="webhook_info")],
+                    [InlineKeyboardButton("🗑️ Delete Webhook", callback_data="webhook_delete")],
+                    [InlineKeyboardButton("« Back to Admin", callback_data="admin_main_menu")]
+                ]
+            else:
+                message += "**Current Status:** ❌ No webhook set\n"
+                message += "**Mode:** Polling (development)\n\n"
+                message += "**To set up webhook:**\n"
+                message += "Use: `/set_webhook <https://your-domain.com>`\n\n"
+                message += "**Important:** Webhook is required for production deployment!"
+                
+                keyboard = [
+                    [InlineKeyboardButton("« Back to Admin", callback_data="admin_main_menu")]
+                ]
+            
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(
+                message,
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+            
+        except Exception as e:
+            await query.edit_message_text(
+                f"❌ **Error accessing webhook information**\n\n"
+                f"Error: `{str(e)}`",
+                parse_mode='Markdown'
+            )
+    
+    async def _handle_webhook_info(self, query) -> None:
+        """Handle webhook info display callback."""
+        try:
+            webhook_info = await query.get_bot().get_webhook_info()
+            
+            message = "🔗 **Detailed Webhook Information**\n\n"
+            
+            if webhook_info.url:
+                message += f"**URL:** `{webhook_info.url}`\n"
+                message += f"**Has Custom Certificate:** {'Yes' if webhook_info.has_custom_certificate else 'No'}\n"
+                message += f"**Pending Update Count:** {webhook_info.pending_update_count}\n"
+                message += f"**Max Connections:** {webhook_info.max_connections}\n"
+                
+                if webhook_info.allowed_updates:
+                    message += f"**Allowed Updates:** {', '.join(webhook_info.allowed_updates)}\n"
+                
+                if webhook_info.ip_address:
+                    message += f"**IP Address:** `{webhook_info.ip_address}`\n"
+                
+                if webhook_info.last_error_date:
+                    error_date = datetime.fromtimestamp(webhook_info.last_error_date)
+                    message += f"\n**⚠️ Last Error:**\n"
+                    message += f"**Date:** {error_date.strftime('%Y-%m-%d %H:%M:%S')}\n"
+                    message += f"**Message:** {webhook_info.last_error_message}\n"
+                else:
+                    message += "\n✅ **No errors recorded**"
+            else:
+                message += "❌ **No webhook configured**\n"
+                message += "Bot is running in polling mode."
+            
+            keyboard = [[InlineKeyboardButton("« Back to Webhook Menu", callback_data="webhook_menu")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(
+                message,
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+            
+        except Exception as e:
+            await query.edit_message_text(
+                f"❌ **Error getting webhook details**\n\n"
+                f"Error: `{str(e)}`",
+                parse_mode='Markdown'
+            )
+    
+    async def _handle_webhook_delete(self, query) -> None:
+        """Handle webhook deletion callback."""
+        try:
+            await query.get_bot().delete_webhook()
+            
+            message = "✅ **Webhook Deleted Successfully**\n\n"
+            message += "The bot is now using polling mode.\n"
+            message += "This is suitable for development but not for production.\n\n"
+            message += "Use `/set_webhook <url>` to configure a new webhook."
+            
+            keyboard = [[InlineKeyboardButton("« Back to Webhook Menu", callback_data="webhook_menu")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(
+                message,
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+            
+            logger.info(f"Webhook deleted via callback by admin {query.from_user.id}")
+            
+        except Exception as e:
+            await query.edit_message_text(
+                f"❌ **Error deleting webhook**\n\n"
+                f"Error: `{str(e)}`",
+                parse_mode='Markdown'
+            )
     
     async def _handle_today_report(self, query) -> None:
         """Handle today's report callback."""

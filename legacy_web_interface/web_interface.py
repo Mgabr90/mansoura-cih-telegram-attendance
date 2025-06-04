@@ -1,7 +1,6 @@
 """
 El Mansoura CIH Attendance System - Web Interface
 A modern web dashboard for attendance management and reporting
-Compatible with the new modular architecture
 """
 
 from flask import Flask, render_template, request, jsonify, send_file, flash, redirect, url_for, session
@@ -19,23 +18,21 @@ import pytz
 import os
 from functools import wraps
 import json
-import threading
 
-# Import from new modular structure
-from attendance_system.core.database import AttendanceDatabase
-from attendance_system.core.config import Config
+# Import our database class
+import sys
+sys.path.append('src')
+from database import AttendanceDatabase
+from database_extensions import extend_database_for_web
 
-# Initialize Flask app
-app = Flask(__name__, 
-           template_folder='templates',
-           static_folder='static')
+app = Flask(__name__)
 app.secret_key = os.environ.get('WEB_SECRET_KEY', 'mansoura-cih-attendance-secret-key-2024')
 
-# Initialize database and config
-config = Config()
+# Initialize database with extensions
 db = AttendanceDatabase()
+extend_database_for_web(db)
 
-# Admin credentials
+# Admin credentials (you can change these)
 ADMIN_USERNAME = os.environ.get('WEB_ADMIN_USER', 'admin')
 ADMIN_PASSWORD = os.environ.get('WEB_ADMIN_PASS', 'mansoura2024')
 
@@ -53,12 +50,9 @@ def index():
     """Home page with dashboard overview"""
     try:
         # Get basic stats
-        total_employees = len(db.get_all_employees())
-        today = datetime.now(pytz.timezone(config.TIMEZONE)).date()
-        
-        # Get today's attendance records
-        today_records = [r for r in db.get_daily_attendance_records(today) if r['check_in_time']]
-        today_checkins = len(today_records)
+        total_employees = db.get_total_employees_count()
+        today = datetime.now(pytz.timezone('Africa/Cairo')).date()
+        today_checkins = db.get_daily_checkins_count(today)
         
         stats = {
             'total_employees': total_employees,
@@ -99,43 +93,26 @@ def logout():
 def admin_dashboard():
     """Admin dashboard with detailed analytics"""
     try:
-        egypt_tz = pytz.timezone(config.TIMEZONE)
+        egypt_tz = pytz.timezone('Africa/Cairo')
         today = datetime.now(egypt_tz).date()
         
-        # Get all employees and today's records
-        all_employees = db.get_all_employees()
-        today_records = db.get_daily_attendance_records(today)
-        
-        # Calculate stats
-        total_employees = len(all_employees)
-        today_checkins = len([r for r in today_records if r['check_in_time']])
-        today_checkouts = len([r for r in today_records if r['check_out_time']])
-        
-        # Get currently checked in employees
-        active_employees = len([r for r in today_records if r['check_in_time'] and not r['check_out_time']])
-        
-        # Calculate late employees (after 9:30 AM)
-        late_threshold = datetime.combine(today, datetime.strptime("09:30", "%H:%M").time())
-        late_threshold = egypt_tz.localize(late_threshold)
-        late_employees = 0
-        
-        for record in today_records:
-            if record['check_in_time']:
-                check_in_dt = datetime.fromisoformat(record['check_in_time'].replace('Z', '+00:00'))
-                if check_in_dt > late_threshold:
-                    late_employees += 1
-        
+        # Get comprehensive stats
         stats = {
-            'total_employees': total_employees,
-            'today_checkins': today_checkins,
-            'today_checkouts': today_checkouts,
-            'late_employees': late_employees,
-            'active_employees': active_employees,
-            'attendance_rate': round((today_checkins / total_employees * 100) if total_employees > 0 else 0, 1)
+            'total_employees': db.get_total_employees_count(),
+            'today_checkins': db.get_daily_checkins_count(today),
+            'today_checkouts': db.get_daily_checkouts_count(today),
+            'late_employees': len(db.get_late_employees(30)),  # 30 min threshold
+            'active_employees': db.get_currently_checked_in_count(),
         }
         
-        # Get recent activity (last 10 records)
-        recent_activity = today_records[-10:] if today_records else []
+        # Calculate attendance rate
+        stats['attendance_rate'] = round(
+            (stats['today_checkins'] / stats['total_employees'] * 100) 
+            if stats['total_employees'] > 0 else 0, 1
+        )
+        
+        # Get recent activity
+        recent_activity = db.get_recent_attendance_activity(10)
         
         return render_template('admin_dashboard.html', stats=stats, recent_activity=recent_activity)
     except Exception as e:
@@ -162,10 +139,11 @@ def employees():
 def settings():
     """Settings management page"""
     try:
+        # Get current settings from config
         settings_data = {
-            'office_location': f"{config.OFFICE_LATITUDE}, {config.OFFICE_LONGITUDE}",
-            'attendance_radius': f"{config.OFFICE_RADIUS}m",
-            'timezone': config.TIMEZONE,
+            'office_location': f"{os.environ.get('OFFICE_LATITUDE', '31.0364')}, {os.environ.get('OFFICE_LONGITUDE', '31.3789')}",
+            'attendance_radius': os.environ.get('OFFICE_RADIUS', '100'),
+            'timezone': os.environ.get('TIMEZONE', 'Africa/Cairo'),
             'working_hours': '09:00 - 17:00'
         }
         return render_template('settings.html', settings=settings_data)
@@ -177,29 +155,16 @@ def settings():
 def attendance_chart():
     """Generate attendance chart data"""
     try:
-        egypt_tz = pytz.timezone(config.TIMEZONE)
-        end_date = datetime.now(egypt_tz).date()
+        # Get last 7 days data
+        end_date = datetime.now(pytz.timezone('Africa/Cairo')).date()
         start_date = end_date - timedelta(days=6)
         
-        chart_data = []
-        current_date = start_date
-        
-        while current_date <= end_date:
-            records = db.get_daily_attendance_records(current_date)
-            checkins = len([r for r in records if r['check_in_time']])
-            checkouts = len([r for r in records if r['check_out_time']])
-            
-            chart_data.append({
-                'date': current_date.strftime('%Y-%m-%d'),
-                'checkins': checkins,
-                'checkouts': checkouts
-            })
-            current_date += timedelta(days=1)
+        chart_data = db.get_attendance_chart_data(start_date, end_date)
         
         return jsonify({
-            'dates': [item['date'] for item in chart_data],
-            'checkins': [item['checkins'] for item in chart_data],
-            'checkouts': [item['checkouts'] for item in chart_data]
+            'dates': [item[0] for item in chart_data],
+            'checkins': [item[1] for item in chart_data],
+            'checkouts': [item[2] for item in chart_data]
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -209,14 +174,24 @@ def attendance_chart():
 def export_report(report_type):
     """Export reports as CSV"""
     try:
-        egypt_tz = pytz.timezone(config.TIMEZONE)
+        egypt_tz = pytz.timezone('Africa/Cairo')
         today = datetime.now(egypt_tz).date()
         
         if report_type == 'daily':
             date_str = request.args.get('date', today.strftime('%Y-%m-%d'))
-            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
-            data = db.get_daily_attendance_records(date_obj)
+            data = db.get_daily_report(date_str)
             filename = f'daily_report_{date_str}.csv'
+            
+        elif report_type == 'weekly':
+            end_date = today
+            start_date = today - timedelta(days=6)
+            data = db.get_weekly_report(start_date, end_date)
+            filename = f'weekly_report_{start_date}_to_{end_date}.csv'
+            
+        elif report_type == 'monthly':
+            month = request.args.get('month', today.strftime('%Y-%m'))
+            data = db.get_monthly_report(month)
+            filename = f'monthly_report_{month}.csv'
             
         elif report_type == 'employees':
             data = db.get_all_employees()
@@ -225,16 +200,14 @@ def export_report(report_type):
         else:
             return jsonify({'error': 'Invalid report type'}), 400
         
-        # Convert to DataFrame
+        # Convert to DataFrame and CSV
         df = pd.DataFrame(data)
-        
-        # Create CSV
         output = io.StringIO()
         df.to_csv(output, index=False)
         output.seek(0)
         
         return send_file(
-            io.BytesIO(output.getvalue().encode()),
+            io.BytesIO(output.getvalue().encode('utf-8')),
             mimetype='text/csv',
             as_attachment=True,
             download_name=filename
@@ -248,14 +221,16 @@ def export_report(report_type):
 def toggle_admin(employee_id):
     """Toggle admin status for an employee"""
     try:
-        current_status = db.is_admin(employee_id)
+        action = request.json.get('action')  # 'add' or 'remove'
         
-        if current_status:
-            # Remove admin (if it's a method available)
-            return jsonify({'error': 'Remove admin function not implemented'}), 501
-        else:
+        if action == 'add':
             db.add_admin(employee_id)
-            return jsonify({'success': True, 'message': 'Admin status granted'})
+            return jsonify({'success': True, 'message': f'User {employee_id} added as admin'})
+        elif action == 'remove':
+            db.remove_admin(employee_id)
+            return jsonify({'success': True, 'message': f'Admin privileges removed from user {employee_id}'})
+        else:
+            return jsonify({'error': 'Invalid action'}), 400
             
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -263,19 +238,17 @@ def toggle_admin(employee_id):
 @app.route('/api/stats')
 @login_required
 def get_stats():
-    """Get real-time stats"""
+    """Get real-time statistics"""
     try:
-        egypt_tz = pytz.timezone(config.TIMEZONE)
+        egypt_tz = pytz.timezone('Africa/Cairo')
         today = datetime.now(egypt_tz).date()
         
-        all_employees = db.get_all_employees()
-        today_records = db.get_daily_attendance_records(today)
-        
         stats = {
-            'total_employees': len(all_employees),
-            'today_checkins': len([r for r in today_records if r['check_in_time']]),
-            'today_checkouts': len([r for r in today_records if r['check_out_time']]),
-            'active_employees': len([r for r in today_records if r['check_in_time'] and not r['check_out_time']])
+            'total_employees': db.get_total_employees_count(),
+            'today_checkins': db.get_daily_checkins_count(today),
+            'today_checkouts': db.get_daily_checkouts_count(today),
+            'active_employees': db.get_currently_checked_in_count(),
+            'late_employees': len(db.get_late_employees(30))
         }
         
         stats['attendance_rate'] = round(
@@ -287,26 +260,10 @@ def get_stats():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Health check endpoint for the web interface
-@app.route('/web-health')
-def web_health():
-    """Web interface health check"""
-    return jsonify({
-        'status': 'healthy',
-        'service': 'web-interface',
-        'timestamp': datetime.now(pytz.timezone(config.TIMEZONE)).isoformat()
-    })
-
 if __name__ == '__main__':
-    print("🌐 Starting El Mansoura CIH Web Interface...")
-    print(f"📍 Office Location: {config.OFFICE_LATITUDE}, {config.OFFICE_LONGITUDE}")
-    print(f"🎯 Office Radius: {config.OFFICE_RADIUS}m")
-    print("🔐 Admin Login: /login")
-    print("=" * 50)
+    # Create templates directory if it doesn't exist
+    os.makedirs('templates', exist_ok=True)
+    os.makedirs('static', exist_ok=True)
     
-    # Run Flask app
-    app.run(
-        host='0.0.0.0', 
-        port=int(os.environ.get('PORT', 5000)),
-        debug=os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
-    ) 
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=os.environ.get('DEBUG', 'False').lower() == 'true') 

@@ -96,6 +96,9 @@ class AttendanceBot:
         
         # Admin commands
         self.app.add_handler(CommandHandler("admin", self.admin_handlers.admin_command))
+        self.app.add_handler(CommandHandler("set_webhook", self.admin_handlers.set_webhook_command))
+        self.app.add_handler(CommandHandler("webhook_info", self.admin_handlers.webhook_info_command))
+        self.app.add_handler(CommandHandler("delete_webhook", self.admin_handlers.delete_webhook_command))
         self.app.add_handler(CommandHandler("add_admin", self.admin_handlers.add_admin_command))
         self.app.add_handler(CommandHandler("exceptional_hours", self.admin_handlers.exceptional_hours_command))
         self.app.add_handler(CommandHandler("admin_report", self.admin_handlers.admin_report_command))

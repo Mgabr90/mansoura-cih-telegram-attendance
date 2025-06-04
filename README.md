@@ -1,6 +1,6 @@
 # Enhanced Mansoura CIH Telegram Attendance System
 
-A comprehensive, secure attendance tracking system built with Python and Telegram Bot API. Features location-only check-ins, exceptional hours management, and real-time admin reporting.
+A comprehensive, secure attendance tracking system built with Python and Telegram Bot API. Features location-only check-ins, exceptional hours management, real-time admin reporting, and a modern web dashboard.
 
 ## 🌟 Features
 
@@ -20,12 +20,22 @@ A comprehensive, secure attendance tracking system built with Python and Telegra
 ### 👨‍💼 Admin Features
 - **Daily summary reports** automatically sent at 8 PM
 - **Real-time dashboards** with attendance statistics
+- **Web-based admin panel** with charts and analytics
 - **Exceptional hours management** for individual employees
 - **Enhanced late alerts** with employee-provided reasons
 - **Employee directory** with comprehensive management
 - **Server health monitoring** and activity logging
 
+### 🌐 Web Dashboard Features
+- **Modern web interface** with responsive design
+- **Real-time analytics** and attendance charts
+- **Employee management** with admin controls
+- **Report generation** and CSV exports
+- **Interactive dashboards** with live data
+- **Settings management** and configuration
+
 ### 🖥️ Technical Features
+- **Dual deployment modes** - Bot only or Bot + Web interface
 - **Server wake-up system** (prevents Render free tier sleep)
 - **Comprehensive logging** and error handling
 - **Database optimization** with proper indexing
@@ -53,10 +63,49 @@ A comprehensive, secure attendance tracking system built with Python and Telegra
    # Edit .env with your bot token and settings
    ```
 
-3. **Run the bot**:
+3. **Run the system**:
+   
+   **Option A: Complete System (Bot + Web Interface)**
    ```bash
-   python run.py
+   python app.py
+   # Access web dashboard at: http://localhost:5000
    ```
+   
+   **Option B: Telegram Bot Only**
+   ```bash
+   python run_bot.py
+   ```
+   
+   **Option C: Web Interface Only**
+   ```bash
+   python run_web.py
+   ```
+
+## 🌐 Web Interface
+
+### Access & Login
+- **URL**: `http://localhost:5000` (or your deployed domain)
+- **Admin Login**: `/login`
+- **Default Credentials**: 
+  - Username: `admin`
+  - Password: `mansoura2024`
+
+### Web Features
+- **Dashboard**: Real-time attendance overview
+- **Employee Management**: View, edit, and manage employees
+- **Reports**: Generate and export attendance reports
+- **Analytics**: Charts and statistics
+- **Settings**: System configuration
+
+### Web Configuration
+Add to your `.env` file:
+```env
+# Web Interface
+WEB_SECRET_KEY=your-secret-key-here
+WEB_ADMIN_USER=admin
+WEB_ADMIN_PASS=your-secure-password
+FLASK_DEBUG=false
+```
 
 ## 📁 Project Structure
 

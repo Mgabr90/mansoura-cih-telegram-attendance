@@ -4,7 +4,7 @@ Setup script to add the first administrator to the attendance system.
 Run this script once to set up the initial admin user.
 """
 
-from database import AttendanceDatabase
+from attendance_system.core.database import AttendanceDatabase
 
 def setup_first_admin():
     """Setup the first administrator"""
@@ -45,7 +45,7 @@ def setup_first_admin():
         except Exception as e:
             print(f"❌ Error: {e}")
             
-    print("\n🚀 Admin setup complete! You can now start the bot with: python bot.py")
+    print("\n🚀 Admin setup complete! You can now start the bot with: python run.py")
 
 if __name__ == "__main__":
     setup_first_admin() 
