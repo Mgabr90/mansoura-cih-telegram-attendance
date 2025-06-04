@@ -657,7 +657,7 @@ class AttendanceDatabase:
                 logger.info(f"Database cleanup completed - removed data older than {cutoff_date}")
                 
         except Exception as e:
-            logger.error(f"Error during database cleanup: {e}")
+            logger.error(f"Error during database cleanup: {e}") 
     
     # Web Interface Support Methods
     def get_all_employees(self) -> List[Dict[str, Any]]:
