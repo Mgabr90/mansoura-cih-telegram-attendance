@@ -60,6 +60,22 @@ class AttendanceBotWebhook:
         self.loop = None
         self.loop_thread = None
         self.start_async_loop()
+        
+        # Initialize the Telegram Application
+        self.init_telegram_app()
+    
+    def init_telegram_app(self):
+        """Initialize the Telegram Application in the async loop"""
+        def init_app():
+            future = asyncio.run_coroutine_threadsafe(
+                self.app.initialize(), 
+                self.loop
+            )
+            future.result(timeout=10)
+            logger.info("✅ Telegram Application initialized successfully")
+        
+        # Initialize after a short delay to ensure loop is ready
+        threading.Timer(1.0, init_app).start()
     
     def start_async_loop(self):
         """Start an event loop in a separate thread for async operations"""
