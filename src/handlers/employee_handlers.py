@@ -24,7 +24,7 @@ class EmployeeHandlers:
         
         if not self.db.is_employee_registered(user.id):
             await update.message.reply_text(
-                Messages.welcome_unregistered(user),
+                Messages.welcome_new_user(user.first_name),
                 reply_markup=Keyboards.get_registration_keyboard(),
                 parse_mode='Markdown'
             )
@@ -33,7 +33,7 @@ class EmployeeHandlers:
             checked_in = is_checked_in and is_checked_in[2] == 'checked_in'
             
             await update.message.reply_text(
-                Messages.welcome_registered(user),
+                Messages.welcome_back(user.first_name),
                 reply_markup=Keyboards.get_main_keyboard(checked_in),
                 parse_mode='Markdown'
             )
@@ -47,8 +47,8 @@ class EmployeeHandlers:
             return
         
         await update.message.reply_text(
-            Messages.registration_prompt(),
-            reply_markup=Keyboards.get_contact_keyboard(),
+            Messages.registration_request(),
+            reply_markup=Keyboards.get_contact_sharing_keyboard(),
             parse_mode='Markdown'
         )
     
