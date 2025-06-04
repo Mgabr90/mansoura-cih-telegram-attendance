@@ -10,6 +10,7 @@ import logging
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+import asyncio
 
 # Add current directory to Python path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -22,7 +23,7 @@ def run_telegram_bot():
         
         bot = AttendanceBot()
         print("✅ Telegram Bot initialized successfully")
-        bot.run()
+        asyncio.run(bot.run())
         
     except Exception as e:
         print(f"❌ Error starting Telegram bot: {e}")

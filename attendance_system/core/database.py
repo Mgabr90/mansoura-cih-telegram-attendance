@@ -7,7 +7,7 @@ employee records, attendance tracking, and admin functions.
 
 import sqlite3
 import logging
-from datetime import datetime, time, date
+from datetime import datetime, time, date, timedelta
 from typing import Optional, List, Tuple, Dict, Any
 import pytz
 
@@ -520,7 +520,7 @@ class AttendanceDatabase:
                              data: Optional[str] = None, expires_minutes: int = 30) -> None:
         """Set conversation state for multi-step interactions."""
         try:
-            expires_at = datetime.now() + datetime.timedelta(minutes=expires_minutes)
+            expires_at = datetime.now() + timedelta(minutes=expires_minutes)
             with sqlite3.connect(self.db_name) as conn:
                 cursor = conn.cursor()
                 cursor.execute('''
@@ -630,7 +630,7 @@ class AttendanceDatabase:
     def cleanup_old_data(self, days_to_keep: int = 90) -> None:
         """Clean up old data to maintain database performance."""
         try:
-            cutoff_date = datetime.now().date() - datetime.timedelta(days=days_to_keep)
+            cutoff_date = datetime.now().date() - timedelta(days=days_to_keep)
             
             with sqlite3.connect(self.db_name) as conn:
                 cursor = conn.cursor()
@@ -657,4 +657,81 @@ class AttendanceDatabase:
                 logger.info(f"Database cleanup completed - removed data older than {cutoff_date}")
                 
         except Exception as e:
-            logger.error(f"Error during database cleanup: {e}") 
+            logger.error(f"Error during database cleanup: {e}")
+    
+    # Web Interface Support Methods
+    def get_all_employees(self) -> List[Dict[str, Any]]:
+        """Get all registered employees for web interface."""
+        try:
+            with sqlite3.connect(self.db_name) as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT telegram_id, username, first_name, last_name, phone_number,
+                           is_active, created_at
+                    FROM employees 
+                    ORDER BY first_name, last_name
+                ''')
+                
+                employees = []
+                for row in cursor.fetchall():
+                    employees.append({
+                        'telegram_id': row[0],
+                        'username': row[1],
+                        'first_name': row[2],
+                        'last_name': row[3],
+                        'phone_number': row[4],
+                        'is_active': bool(row[5]),
+                        'created_at': row[6]
+                    })
+                
+                return employees
+                
+        except Exception as e:
+            logger.error(f"Error getting all employees: {e}")
+            return []
+    
+    def get_daily_attendance_records(self, date_obj: date) -> List[Dict[str, Any]]:
+        """Get all attendance records for a specific date for web interface."""
+        try:
+            with sqlite3.connect(self.db_name) as conn:
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT a.id, a.telegram_id, e.first_name, e.last_name, e.username,
+                           a.check_in_time, a.check_out_time, a.check_in_latitude, 
+                           a.check_in_longitude, a.check_out_latitude, a.check_out_longitude,
+                           a.check_in_distance, a.check_out_distance, a.late_reason,
+                           a.early_checkout_reason, a.status, a.is_late, a.is_early_checkout
+                    FROM attendance a
+                    JOIN employees e ON a.telegram_id = e.telegram_id
+                    WHERE a.date = ?
+                    ORDER BY a.check_in_time DESC
+                ''', (date_obj,))
+                
+                records = []
+                for row in cursor.fetchall():
+                    records.append({
+                        'id': row[0],
+                        'telegram_id': row[1],
+                        'first_name': row[2],
+                        'last_name': row[3],
+                        'username': row[4],
+                        'check_in_time': row[5],
+                        'check_out_time': row[6],
+                        'check_in_latitude': row[7],
+                        'check_in_longitude': row[8],
+                        'check_out_latitude': row[9],
+                        'check_out_longitude': row[10],
+                        'check_in_distance': row[11],
+                        'check_out_distance': row[12],
+                        'late_reason': row[13],
+                        'early_checkout_reason': row[14],
+                        'status': row[15],
+                        'is_late': bool(row[16]),
+                        'is_early_checkout': bool(row[17])
+                    })
+                
+                return records
+                
+        except Exception as e:
+            logger.error(f"Error getting daily attendance records for {date_obj}: {e}")
+            return [] 

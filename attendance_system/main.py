@@ -9,6 +9,7 @@ import asyncio
 import logging
 import signal
 import sys
+import threading
 from datetime import datetime
 from typing import Optional
 
@@ -77,12 +78,21 @@ class AttendanceBot:
     
     def _setup_signal_handlers(self) -> None:
         """Setup signal handlers for graceful shutdown."""
-        def signal_handler(signum, frame):
-            logger.info(f"Received signal {signum}, initiating graceful shutdown...")
-            asyncio.create_task(self.shutdown())
-        
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
+        try:
+            def signal_handler(signum, frame):
+                logger.info(f"Received signal {signum}, initiating graceful shutdown...")
+                asyncio.create_task(self.shutdown())
+            
+            # Only setup signal handlers in main thread
+            if threading.current_thread() is threading.main_thread():
+                signal.signal(signal.SIGINT, signal_handler)
+                signal.signal(signal.SIGTERM, signal_handler)
+                logger.info("Signal handlers registered")
+            else:
+                logger.info("Skipping signal handlers - not in main thread")
+        except Exception as e:
+            logger.warning(f"Could not setup signal handlers: {e}")
+            # Continue without signal handlers
     
     def _register_handlers(self) -> None:
         """Register all command and message handlers."""

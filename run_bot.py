@@ -7,12 +7,13 @@ Launcher for Telegram bot only
 import sys
 import os
 import logging
+import asyncio
 
 # Add current directory to Python path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-def main():
-    """Main launcher function for bot only"""
+async def main_async():
+    """Main async launcher function for bot only"""
     try:
         print("🤖 Starting Telegram Bot Only...")
         print("=" * 50)
@@ -29,8 +30,20 @@ def main():
         # Create and run bot
         bot = AttendanceBot()
         print("🎯 Bot ready! Starting attendance tracking...")
-        bot.run()
+        await bot.run()
         
+    except KeyboardInterrupt:
+        print("\n⚠️  Bot stopped by user")
+        sys.exit(0)
+    except Exception as e:
+        print(f"❌ Error starting bot: {e}")
+        logging.exception("Failed to start bot")
+        sys.exit(1)
+
+def main():
+    """Main launcher function for bot only"""
+    try:
+        asyncio.run(main_async())
     except KeyboardInterrupt:
         print("\n⚠️  Bot stopped by user")
         sys.exit(0)
