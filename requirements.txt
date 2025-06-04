@@ -1,5 +1,5 @@
 # Enhanced Mansoura CIH Telegram Attendance System
-# Production Dependencies
+# Production Dependencies for Render Deployment
 
 # Core Bot Framework
 python-telegram-bot==20.7
@@ -14,41 +14,21 @@ pytz==2023.3
 # HTTP and Async Operations
 aiohttp==3.9.1
 
-# Web Server (for health checks)
+# Web Server (for health checks and admin interface)
 flask==3.0.0
+werkzeug>=3.0.0
 
-# Development Dependencies (Optional)
-# Uncomment for development environment
-# pytest==7.4.3
-# pytest-asyncio==0.21.1
-
-# Analytics Dependencies (Optional)
-# Uncomment if using web interface
+# Analytics Dependencies (for web interface)
 pandas==2.0.3
 matplotlib==3.7.2
 seaborn==0.12.2
-werkzeug>=3.0.0
 
 # Security
 cryptography>=41.0.0
-
-# Database - sqlite3 is built-in to Python, no need to install
 
 # Utilities
 requests>=2.31.0
 urllib3>=2.0.0
 
 # Development
-typing-extensions>=4.7.0
-
-# Optional: Better JSON handling
-orjson>=3.9.0
-
-# Optional: Better performance
-uvloop>=0.17.0; sys_platform != "win32"
-
-# Timezone support
-tzdata>=2023.3
-
-# HTTP client improvements
-httpx>=0.24.0 
+typing-extensions>=4.7.0 

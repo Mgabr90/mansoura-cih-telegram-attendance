@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: mansoura-cih-telegram-attendance
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python deployment/start.py
+    plan: free
+    healthCheckPath: /web-health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: PORT
+        value: 10000
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_DEBUG
+        value: false 
