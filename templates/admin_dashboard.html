@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - El Mansoura CIH Attendance{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <h1><i class="fas fa-tachometer-alt me-3"></i>Admin Dashboard</h1>
+    <p class="mb-0">Comprehensive attendance management and analytics</p>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-2 mb-3">
+        <div class="card stat-card success">
+            <div class="card-body text-center">
+                <i class="fas fa-users fa-2x mb-2"></i>
+                <h4>{{ stats.total_employees }}</h4>
+                <small>Total Employees</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card stat-card info">
+            <div class="card-body text-center">
+                <i class="fas fa-sign-in-alt fa-2x mb-2"></i>
+                <h4>{{ stats.today_checkins }}</h4>
+                <small>Today Check-ins</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card stat-card warning">
+            <div class="card-body text-center">
+                <i class="fas fa-sign-out-alt fa-2x mb-2"></i>
+                <h4>{{ stats.today_checkouts }}</h4>
+                <small>Today Check-outs</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card stat-card">
+            <div class="card-body text-center">
+                <i class="fas fa-percentage fa-2x mb-2"></i>
+                <h4>{{ stats.attendance_rate }}%</h4>
+                <small>Attendance Rate</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card stat-card success">
+            <div class="card-body text-center">
+                <i class="fas fa-user-check fa-2x mb-2"></i>
+                <h4>{{ stats.active_employees }}</h4>
+                <small>Currently Active</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 mb-3">
+        <div class="card stat-card warning">
+            <div class="card-body text-center">
+                <i class="fas fa-clock fa-2x mb-2"></i>
+                <h4>{{ stats.late_employees }}</h4>
+                <small>Late Today</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-chart-line me-2"></i>Attendance Trends</h5>
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshChart()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                <canvas id="attendanceTrendChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-clock me-2"></i>Real-time Stats</h5>
+            </div>
+            <div class="card-body">
+                <div id="realTimeStats">
+                    <div class="d-flex justify-content-between mb-3">
+                        <span><i class="fas fa-user-clock text-info"></i> Online Now:</span>
+                        <span class="badge bg-info" id="onlineCount">{{ stats.active_employees }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span><i class="fas fa-exclamation-triangle text-warning"></i> Late Today:</span>
+                        <span class="badge bg-warning" id="lateCount">{{ stats.late_employees }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span><i class="fas fa-percentage text-success"></i> Attendance:</span>
+                        <span class="badge bg-success" id="attendanceRate">{{ stats.attendance_rate }}%</span>
+                    </div>
+                </div>
+                <hr>
+                <div class="text-center">
+                    <button class="btn btn-sm btn-primary" onclick="refreshStats()">
+                        <i class="fas fa-sync-alt"></i> Update Stats
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('reports') }}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-chart-bar me-2"></i>Generate Reports
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('employees') }}" class="btn btn-outline-success w-100">
+                            <i class="fas fa-users me-2"></i>Manage Employees
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <button class="btn btn-outline-warning w-100" onclick="exportDaily()">
+                            <i class="fas fa-download me-2"></i>Export Today
+                        </button>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('settings') }}" class="btn btn-outline-info w-100">
+                            <i class="fas fa-cog me-2"></i>Settings
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-history me-2"></i>Recent Activity</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Action</th>
+                                <th>Time</th>
+                                <th>Location Status</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentActivity">
+                            {% if recent_activity %}
+                                {% for activity in recent_activity %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ activity[0] }}</strong>
+                                        <br><small class="text-muted">@{{ activity[1] or 'No username' }}</small>
+                                    </td>
+                                    <td>
+                                        {% if activity[2] == 'check_in' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-sign-in-alt"></i> Check In
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-sign-out-alt"></i> Check Out
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ activity[3] }}</td>
+                                    <td>
+                                        <span class="badge bg-info">{{ activity[4] or 'N/A' }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ activity[5] or 'Active' }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">
+                                    <i class="fas fa-info-circle me-2"></i>No recent activity
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let attendanceChart;
+
+    // Initialize chart
+    function initChart() {
+        const ctx = document.getElementById('attendanceTrendChart').getContext('2d');
+        attendanceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Check-ins',
+                    data: [],
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }, {
+                    label: 'Check-outs',
+                    data: [],
+                    borderColor: '#e74c3c',
+                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Refresh chart data
+    function refreshChart() {
+        fetch('/api/attendance-chart')
+            .then(response => response.json())
+            .then(data => {
+                attendanceChart.data.labels = data.dates;
+                attendanceChart.data.datasets[0].data = data.checkins;
+                attendanceChart.data.datasets[1].data = data.checkouts;
+                attendanceChart.update();
+            })
+            .catch(error => console.error('Error refreshing chart:', error));
+    }
+
+    // Refresh real-time stats
+    function refreshStats() {
+        fetch('/api/stats')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('onlineCount').textContent = data.active_employees;
+                document.getElementById('lateCount').textContent = data.late_employees;
+                document.getElementById('attendanceRate').textContent = data.attendance_rate + '%';
+            })
+            .catch(error => console.error('Error refreshing stats:', error));
+    }
+
+    // Export today's report
+    function exportDaily() {
+        const today = new Date().toISOString().split('T')[0];
+        window.location.href = `/api/export/daily?date=${today}`;
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        initChart();
+        refreshChart();
+        
+        // Auto-refresh stats every 30 seconds
+        setInterval(refreshStats, 30000);
+        
+        // Auto-refresh chart every 5 minutes
+        setInterval(refreshChart, 300000);
+    });
+</script>
+{% endblock %} 

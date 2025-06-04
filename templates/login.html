@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Login - El Mansoura CIH Attendance{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card">
+            <div class="card-header text-center">
+                <h4><i class="fas fa-user-shield me-2"></i>Admin Login</h4>
+                <p class="text-muted mb-0">Access the attendance management system</p>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">
+                            <i class="fas fa-user me-2"></i>Username
+                        </label>
+                        <input type="text" class="form-control" id="username" name="username" required 
+                               placeholder="Enter your username">
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            <i class="fas fa-lock me-2"></i>Password
+                        </label>
+                        <input type="password" class="form-control" id="password" name="password" required 
+                               placeholder="Enter your password">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i>Login
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center text-muted">
+                <small>
+                    <i class="fas fa-home me-1"></i>
+                    <a href="{{ url_for('index') }}" class="text-decoration-none">Back to Dashboard</a>
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Login Info -->
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6><i class="fas fa-info-circle me-2"></i>Default Credentials</h6>
+                <p class="mb-2"><strong>Username:</strong> admin</p>
+                <p class="mb-0"><strong>Password:</strong> mansoura2024</p>
+                <small class="text-muted">
+                    You can change these in the environment variables: WEB_ADMIN_USER and WEB_ADMIN_PASS
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-focus on username field
+    document.getElementById('username').focus();
+    
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        
+        if (!username || !password) {
+            e.preventDefault();
+            alert('Please fill in all fields');
+        }
+    });
+</script>
+{% endblock %} 

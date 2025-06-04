@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - El Mansoura CIH Attendance{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <h1><i class="fas fa-cog me-3"></i>System Settings</h1>
+    <p class="mb-0">Configure attendance system parameters and preferences</p>
+</div>
+
+<!-- Settings Sections -->
+<div class="row">
+    <!-- Office Location Settings -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-map-marker-alt me-2"></i>Office Location</h5>
+            </div>
+            <div class="card-body">
+                <form id="locationForm">
+                    <div class="mb-3">
+                        <label class="form-label">Current Location</label>
+                        <input type="text" class="form-control" value="{{ settings.office_location }}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Attendance Radius (meters)</label>
+                        <input type="number" class="form-control" value="{{ settings.attendance_radius }}" readonly>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Office location and radius are configured in environment variables.
+                        Contact your system administrator to change these settings.
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Working Hours -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-clock me-2"></i>Working Hours</h5>
+            </div>
+            <div class="card-body">
+                <form id="workingHoursForm">
+                    <div class="mb-3">
+                        <label class="form-label">Standard Working Hours</label>
+                        <input type="text" class="form-control" value="{{ settings.working_hours }}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Timezone</label>
+                        <input type="text" class="form-control" value="{{ settings.timezone }}" readonly>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Working hours configuration will be available in future updates.
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Information -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle me-2"></i>System Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <h6>Database</h6>
+                        <p class="text-muted">SQLite</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h6>Framework</h6>
+                        <p class="text-muted">Flask + Telegram Bot</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h6>Version</h6>
+                        <p class="text-muted">1.0.0</p>
+                    </div>
+                    <div class="col-md-3">
+                        <h6>Deployment</h6>
+                        <p class="text-muted">Render.com Ready</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Environment Variables Guide -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-code me-2"></i>Environment Variables Configuration</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Configure these environment variables in your deployment platform (Render, etc.):</p>
+                
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Variable</th>
+                                <th>Description</th>
+                                <th>Default Value</th>
+                                <th>Required</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>BOT_TOKEN</code></td>
+                                <td>Telegram Bot Token</td>
+                                <td>-</td>
+                                <td><span class="badge bg-danger">Yes</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>OFFICE_LATITUDE</code></td>
+                                <td>Office GPS Latitude</td>
+                                <td>31.0364</td>
+                                <td><span class="badge bg-warning">Recommended</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>OFFICE_LONGITUDE</code></td>
+                                <td>Office GPS Longitude</td>
+                                <td>31.3789</td>
+                                <td><span class="badge bg-warning">Recommended</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>OFFICE_RADIUS</code></td>
+                                <td>Attendance Radius (meters)</td>
+                                <td>100</td>
+                                <td><span class="badge bg-info">Optional</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>TIMEZONE</code></td>
+                                <td>System Timezone</td>
+                                <td>Africa/Cairo</td>
+                                <td><span class="badge bg-info">Optional</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>WEB_ADMIN_USER</code></td>
+                                <td>Web Interface Username</td>
+                                <td>admin</td>
+                                <td><span class="badge bg-info">Optional</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>WEB_ADMIN_PASS</code></td>
+                                <td>Web Interface Password</td>
+                                <td>mansoura2024</td>
+                                <td><span class="badge bg-warning">Recommended</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>WEB_SECRET_KEY</code></td>
+                                <td>Flask Secret Key</td>
+                                <td>Auto-generated</td>
+                                <td><span class="badge bg-info">Optional</span></td>
+                            </tr>
+                            <tr>
+                                <td><code>PORT</code></td>
+                                <td>Web Server Port</td>
+                                <td>5000</td>
+                                <td><span class="badge bg-info">Optional</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-success mt-3">
+                    <h6><i class="fas fa-rocket me-2"></i>Quick Deployment Guide:</h6>
+                    <ol class="mb-0">
+                        <li>Create a new Web Service on Render.com</li>
+                        <li>Connect your GitHub repository</li>
+                        <li>Set the build command: <code>pip install -r requirements.txt</code></li>
+                        <li>Set the start command: <code>python web_interface.py</code></li>
+                        <li>Add the environment variables listed above</li>
+                        <li>Deploy and access your web interface!</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Settings functionality would go here
+    console.log('Settings page loaded');
+</script>
+{% endblock %} 

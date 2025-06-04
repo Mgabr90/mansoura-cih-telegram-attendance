@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block title %}Employee Management - El Mansoura CIH Attendance{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <h1><i class="fas fa-users me-3"></i>Employee Management</h1>
+    <p class="mb-0">Manage employee accounts and administrative privileges</p>
+</div>
+
+<!-- Search and Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" id="searchEmployees" placeholder="Search employees...">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-control" id="filterStatus">
+                    <option value="">All Employees</option>
+                    <option value="admin">Admins Only</option>
+                    <option value="regular">Regular Employees</option>
+                    <option value="active">Active Today</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-primary" onclick="refreshEmployeeList()">
+                    <i class="fas fa-sync-alt me-2"></i>Refresh
+                </button>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-success" onclick="exportEmployees()">
+                    <i class="fas fa-download me-2"></i>Export
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Admin Section -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5><i class="fas fa-user-plus me-2"></i>Add New Administrator</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-id-badge"></i></span>
+                    <input type="number" class="form-control" id="newAdminId" placeholder="Enter Telegram User ID">
+                    <button class="btn btn-primary" onclick="addAdmin()">
+                        <i class="fas fa-user-shield me-2"></i>Make Admin
+                    </button>
+                </div>
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Enter the Telegram User ID of the person you want to make an administrator
+                </small>
+            </div>
+            <div class="col-md-6">
+                <div class="alert alert-info mb-0">
+                    <strong>How to get User ID:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Ask user to send /start to the bot</li>
+                        <li>Use @userinfobot on Telegram</li>
+                        <li>Use @RawDataBot on Telegram</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Employee List -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5><i class="fas fa-list me-2"></i>Employee Directory</h5>
+        <span class="badge bg-primary" id="employeeCount">{{ employees|length if employees else 0 }} Employees</span>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover" id="employeeTable">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Contact</th>
+                        <th>Telegram ID</th>
+                        <th>Registration Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if employees %}
+                        {% for employee in employees %}
+                        <tr data-employee-id="{{ employee[0] }}">
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar bg-primary text-white rounded-circle me-3" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+                                        {{ employee[1][0] if employee[1] else 'U' }}
+                                    </div>
+                                    <div>
+                                        <strong>{{ employee[1] or 'Unknown' }} {{ employee[2] or '' }}</strong>
+                                        <br><small class="text-muted">@{{ employee[3] or 'No username' }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <i class="fas fa-phone me-2"></i>{{ employee[4] or 'Not provided' }}
+                            </td>
+                            <td>
+                                <code>{{ employee[0] }}</code>
+                            </td>
+                            <td>
+                                {{ employee[5] or 'Unknown' }}
+                            </td>
+                            <td>
+                                <span class="badge bg-success">Active</span>
+                                {% if employee[6] %}
+                                    <span class="badge bg-warning">Admin</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    {% if employee[6] %}
+                                        <button class="btn btn-outline-warning" onclick="removeAdmin({{ employee[0] }})" title="Remove Admin">
+                                            <i class="fas fa-user-minus"></i>
+                                        </button>
+                                    {% else %}
+                                        <button class="btn btn-outline-success" onclick="makeAdmin({{ employee[0] }})" title="Make Admin">
+                                            <i class="fas fa-user-shield"></i>
+                                        </button>
+                                    {% endif %}
+                                    <button class="btn btn-outline-info" onclick="viewEmployee({{ employee[0] }})" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-primary" onclick="viewAttendance({{ employee[0] }})" title="View Attendance">
+                                        <i class="fas fa-calendar-check"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="fas fa-users fa-3x mb-3"></i>
+                            <br>No employees registered yet
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Employee Detail Modal -->
+<div class="modal fade" id="employeeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-user me-2"></i>Employee Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="employeeModalBody">
+                <!-- Employee details will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Search functionality
+    document.getElementById('searchEmployees').addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const rows = document.querySelectorAll('#employeeTable tbody tr');
+        
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            row.style.display = text.includes(searchTerm) ? '' : 'none';
+        });
+    });
+
+    // Filter functionality
+    document.getElementById('filterStatus').addEventListener('change', function() {
+        const filter = this.value;
+        const rows = document.querySelectorAll('#employeeTable tbody tr');
+        
+        rows.forEach(row => {
+            const isAdmin = row.querySelector('.badge.bg-warning');
+            let show = true;
+            
+            switch(filter) {
+                case 'admin':
+                    show = isAdmin !== null;
+                    break;
+                case 'regular':
+                    show = isAdmin === null;
+                    break;
+                case 'active':
+                    // In real app, this would check today's attendance
+                    show = true;
+                    break;
+                default:
+                    show = true;
+            }
+            
+            row.style.display = show ? '' : 'none';
+        });
+    });
+
+    // Add admin function
+    function addAdmin() {
+        const userId = document.getElementById('newAdminId').value;
+        if (!userId) {
+            alert('Please enter a user ID');
+            return;
+        }
+        
+        fetch(`/api/employees/${userId}/admin`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ action: 'add' })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.error || 'Failed to add admin');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error adding admin');
+        });
+    }
+
+    // Make admin function
+    function makeAdmin(userId) {
+        if (confirm('Are you sure you want to make this user an administrator?')) {
+            fetch(`/api/employees/${userId}/admin`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ action: 'add' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert(data.error || 'Failed to make admin');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error making admin');
+            });
+        }
+    }
+
+    // Remove admin function
+    function removeAdmin(userId) {
+        if (confirm('Are you sure you want to remove admin privileges from this user?')) {
+            fetch(`/api/employees/${userId}/admin`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ action: 'remove' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert(data.error || 'Failed to remove admin');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error removing admin');
+            });
+        }
+    }
+
+    // View employee details
+    function viewEmployee(userId) {
+        // In real app, this would fetch employee details from API
+        const modalBody = document.getElementById('employeeModalBody');
+        modalBody.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6><i class="fas fa-id-card me-2"></i>Basic Information</h6>
+                    <ul class="list-unstyled">
+                        <li><strong>User ID:</strong> ${userId}</li>
+                        <li><strong>Registration:</strong> 2024-01-15</li>
+                        <li><strong>Status:</strong> <span class="badge bg-success">Active</span></li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6><i class="fas fa-chart-bar me-2"></i>Attendance Summary</h6>
+                    <ul class="list-unstyled">
+                        <li><strong>This Month:</strong> 20/22 days</li>
+                        <li><strong>Avg Check-in:</strong> 09:05 AM</li>
+                        <li><strong>Late Days:</strong> 3</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+        
+        new bootstrap.Modal(document.getElementById('employeeModal')).show();
+    }
+
+    // View attendance
+    function viewAttendance(userId) {
+        // Redirect to attendance view (would be implemented)
+        alert(`Viewing attendance for user ${userId}`);
+    }
+
+    // Refresh employee list
+    function refreshEmployeeList() {
+        location.reload();
+    }
+
+    // Export employees
+    function exportEmployees() {
+        window.location.href = '/api/export/employees';
+    }
+</script>
+{% endblock %} 

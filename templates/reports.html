@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - El Mansoura CIH Attendance{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <h1><i class="fas fa-chart-bar me-3"></i>Attendance Reports</h1>
+    <p class="mb-0">Generate and export comprehensive attendance reports</p>
+</div>
+
+<!-- Export Options -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-calendar-day fa-3x text-primary mb-3"></i>
+                <h5>Daily Report</h5>
+                <p class="text-muted">Export attendance for a specific day</p>
+                <div class="mb-3">
+                    <input type="date" class="form-control" id="dailyDate" value="{{ today }}">
+                </div>
+                <button class="btn btn-primary" onclick="exportDaily()">
+                    <i class="fas fa-download me-2"></i>Export Daily
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-calendar-week fa-3x text-success mb-3"></i>
+                <h5>Weekly Report</h5>
+                <p class="text-muted">Export last 7 days attendance</p>
+                <button class="btn btn-success" onclick="exportWeekly()">
+                    <i class="fas fa-download me-2"></i>Export Weekly
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-calendar-alt fa-3x text-warning mb-3"></i>
+                <h5>Monthly Report</h5>
+                <p class="text-muted">Export monthly attendance summary</p>
+                <div class="mb-3">
+                    <input type="month" class="form-control" id="monthlyDate" value="{{ current_month }}">
+                </div>
+                <button class="btn btn-warning" onclick="exportMonthly()">
+                    <i class="fas fa-download me-2"></i>Export Monthly
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-users fa-3x text-info mb-3"></i>
+                <h5>Employee List</h5>
+                <p class="text-muted">Export all registered employees</p>
+                <button class="btn btn-info" onclick="exportEmployees()">
+                    <i class="fas fa-download me-2"></i>Export Employees
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Advanced Filters -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5><i class="fas fa-filter me-2"></i>Advanced Report Filters</h5>
+    </div>
+    <div class="card-body">
+        <form id="advancedReportForm">
+            <div class="row">
+                <div class="col-md-3">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="startDate">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">End Date</label>
+                    <input type="date" class="form-control" id="endDate">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Report Type</label>
+                    <select class="form-control" id="reportType">
+                        <option value="detailed">Detailed Attendance</option>
+                        <option value="summary">Summary Report</option>
+                        <option value="late">Late Arrivals</option>
+                        <option value="overtime">Overtime Report</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="button" class="btn btn-primary d-block w-100" onclick="generateCustomReport()">
+                        <i class="fas fa-cog me-2"></i>Generate Custom Report
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Report Preview -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5><i class="fas fa-table me-2"></i>Report Preview</h5>
+        <div>
+            <button class="btn btn-sm btn-outline-primary" onclick="refreshPreview()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+            <button class="btn btn-sm btn-success" onclick="exportPreview()">
+                <i class="fas fa-download"></i> Export Current View
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div id="reportPreview">
+            <div class="text-center py-5">
+                <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Select a report type to preview</h5>
+                <p class="text-muted">Choose from the options above to generate a report preview</p>
+            </div>
+        </div>
+        
+        <!-- Loading indicator -->
+        <div id="loadingIndicator" class="text-center py-5" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted mt-3">Generating report...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Report Statistics -->
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card stat-card success">
+            <div class="card-body text-center">
+                <i class="fas fa-file-export fa-2x mb-3"></i>
+                <h4 id="totalReports">0</h4>
+                <p class="mb-0">Reports Generated Today</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card info">
+            <div class="card-body text-center">
+                <i class="fas fa-clock fa-2x mb-3"></i>
+                <h4 id="avgProcessTime">< 1s</h4>
+                <p class="mb-0">Average Processing Time</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card warning">
+            <div class="card-body text-center">
+                <i class="fas fa-database fa-2x mb-3"></i>
+                <h4 id="totalRecords">0</h4>
+                <p class="mb-0">Total Attendance Records</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Set default dates
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        const monthStr = today.toISOString().slice(0, 7);
+        
+        document.getElementById('dailyDate').value = todayStr;
+        document.getElementById('monthlyDate').value = monthStr;
+        document.getElementById('endDate').value = todayStr;
+        
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        document.getElementById('startDate').value = weekAgo.toISOString().split('T')[0];
+    });
+
+    // Export functions
+    function exportDaily() {
+        const date = document.getElementById('dailyDate').value;
+        window.location.href = `/api/export/daily?date=${date}`;
+    }
+
+    function exportWeekly() {
+        window.location.href = '/api/export/weekly';
+    }
+
+    function exportMonthly() {
+        const month = document.getElementById('monthlyDate').value;
+        window.location.href = `/api/export/monthly?month=${month}`;
+    }
+
+    function exportEmployees() {
+        window.location.href = '/api/export/employees';
+    }
+
+    function generateCustomReport() {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const reportType = document.getElementById('reportType').value;
+        
+        if (!startDate || !endDate) {
+            alert('Please select both start and end dates');
+            return;
+        }
+        
+        showLoading();
+        
+        // Simulate report generation
+        setTimeout(() => {
+            hideLoading();
+            showReportPreview(startDate, endDate, reportType);
+        }, 2000);
+    }
+
+    function showReportPreview(startDate, endDate, reportType) {
+        const preview = document.getElementById('reportPreview');
+        
+        // Sample preview data (in real app, this would come from API)
+        const sampleData = [
+            ['Employee Name', 'Check In', 'Check Out', 'Hours Worked', 'Status'],
+            ['Ahmed Hassan', '09:00', '17:30', '8.5', 'Present'],
+            ['Fatima Ahmed', '09:15', '17:00', '7.75', 'Late'],
+            ['Mohamed Ali', '08:45', '17:45', '9.0', 'Overtime'],
+            ['Sarah Ibrahim', '--', '--', '0', 'Absent']
+        ];
+        
+        let tableHtml = `
+            <div class="alert alert-info">
+                <strong>Report Generated:</strong> ${reportType} from ${startDate} to ${endDate}
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+        `;
+        
+        sampleData[0].forEach(header => {
+            tableHtml += `<th>${header}</th>`;
+        });
+        
+        tableHtml += '</tr></thead><tbody>';
+        
+        for (let i = 1; i < sampleData.length; i++) {
+            tableHtml += '<tr>';
+            sampleData[i].forEach(cell => {
+                tableHtml += `<td>${cell}</td>`;
+            });
+            tableHtml += '</tr>';
+        }
+        
+        tableHtml += '</tbody></table></div>';
+        
+        preview.innerHTML = tableHtml;
+    }
+
+    function refreshPreview() {
+        const preview = document.getElementById('reportPreview');
+        preview.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-sync-alt fa-spin fa-3x text-primary mb-3"></i>
+                <h5 class="text-muted">Refreshing data...</h5>
+            </div>
+        `;
+        
+        setTimeout(() => {
+            preview.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Select a report type to preview</h5>
+                    <p class="text-muted">Choose from the options above to generate a report preview</p>
+                </div>
+            `;
+        }, 1500);
+    }
+
+    function exportPreview() {
+        alert('Exporting current preview as CSV...');
+        // In real app, this would export the current preview data
+    }
+
+    function showLoading() {
+        document.getElementById('reportPreview').style.display = 'none';
+        document.getElementById('loadingIndicator').style.display = 'block';
+    }
+
+    function hideLoading() {
+        document.getElementById('reportPreview').style.display = 'block';
+        document.getElementById('loadingIndicator').style.display = 'none';
+    }
+</script>
+{% endblock %} 
