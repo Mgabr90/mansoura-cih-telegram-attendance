@@ -35,11 +35,12 @@ def run_web_interface():
         print("🌐 Starting Web Interface...")
         from web_interface import app
         
-        port = int(os.environ.get('PORT', 8080))
-        print(f"✅ Web Interface starting on port {port}")
+        # Use different port to avoid conflict with health service
+        web_port = int(os.environ.get('WEB_PORT', 8081))
+        print(f"✅ Web Interface starting on port {web_port}")
         app.run(
             host='0.0.0.0',
-            port=port,
+            port=web_port,
             debug=False,  # Disable debug in production
             use_reloader=False  # Disable reloader to prevent threading issues
         )
@@ -74,7 +75,7 @@ def main():
             
             print("✅ Both services started!")
             print("📱 Telegram Bot: Active")
-            print("🌐 Web Interface: http://localhost:5000")
+            print("🌐 Web Interface: http://localhost:8081")
             print("🔐 Web Admin Login: /login")
             print("=" * 60)
             print("Press Ctrl+C to stop all services")

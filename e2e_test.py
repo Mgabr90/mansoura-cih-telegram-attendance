@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 def test_web_health():
     """Test web interface health endpoint"""
     try:
-        response = requests.get('http://localhost:8080/web-health', timeout=5)
+        response = requests.get('http://localhost:8081/web-health', timeout=5)
         if response.status_code == 200:
             data = response.json()
             print(f"✅ Web Health: {data['status']} - {data['service']}")
@@ -49,7 +49,7 @@ def test_telegram_bot():
 def test_web_dashboard():
     """Test main web dashboard"""
     try:
-        response = requests.get('http://localhost:8080/', timeout=5)
+        response = requests.get('http://localhost:8081/', timeout=5)
         if response.status_code == 200:
             content = response.text
             # Dashboard loads successfully and contains basic structure
@@ -65,7 +65,7 @@ def test_web_dashboard():
 def test_login_page():
     """Test admin login page"""
     try:
-        response = requests.get('http://localhost:8080/login', timeout=5)
+        response = requests.get('http://localhost:8081/login', timeout=5)
         if response.status_code == 200:
             content = response.text
             if 'Admin Login' in content and 'username' in content:
@@ -114,7 +114,7 @@ def test_api_endpoints():
     """Test API endpoints (requires login)"""
     try:
         # Test public API endpoint (stats without login)
-        response = requests.get('http://localhost:8080/api/stats', timeout=5)
+        response = requests.get('http://localhost:8081/api/stats', timeout=5)
         
         # Expecting 302 redirect to login (since not authenticated)
         if response.status_code in [302, 401]:
@@ -128,6 +128,21 @@ def test_api_endpoints():
             return False
     except Exception as e:
         print(f"❌ API Endpoints: {e}")
+        return False
+
+def test_health_service():
+    """Test health service endpoints"""
+    try:
+        response = requests.get('http://localhost:8080/health', timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            print(f"✅ Health Service: {data['status']} - {data['service']}")
+            return True
+        else:
+            print(f"❌ Health Service: HTTP {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Health Service: {e}")
         return False
 
 def main():
@@ -145,6 +160,7 @@ def main():
         ("Database Connection", test_database),
         ("Configuration", test_config),
         ("API Endpoints", test_api_endpoints),
+        ("Health Service", test_health_service),
     ]
     
     passed = 0
@@ -169,10 +185,11 @@ def main():
     
     # Additional system info
     print("\n📋 System Status Summary:")
-    print(f"🌐 Web Interface: http://localhost:8080/")
-    print(f"🔐 Admin Login: http://localhost:8080/login")
+    print(f"🌐 Web Interface: http://localhost:8081/")
+    print(f"🔐 Admin Login: http://localhost:8081/login")
     print(f"📱 Telegram Bot: @CIH_Mansoura_bot")
-    print(f"🏥 Health Check: http://localhost:8080/web-health")
+    print(f"🏥 Health Check: http://localhost:8080/health")
+    print(f"📊 Web Health: http://localhost:8081/web-health")
     
     return passed == total
 
